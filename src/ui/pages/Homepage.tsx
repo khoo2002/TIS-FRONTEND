@@ -264,6 +264,30 @@ export default function Homepage({ cves, threats, lastUpdated }: Props) {
   // apply token to control when search actually runs (Apply button)
   const [applyToken, setApplyToken] = useState(0)
 
+  // auto-refresh: read setting from localStorage and periodically trigger applyToken
+  useEffect(() => {
+    let mounted = true
+    let interval: number | undefined
+    try {
+      const raw = localStorage.getItem('autoRefresh')
+      const enabled = raw === null ? true : JSON.parse(raw)
+      if (enabled) {
+        // 2 minutes
+        interval = window.setInterval(() => {
+          if (!mounted) return
+          // only trigger when component is mounted
+          setApplyToken((t) => t + 1)
+        }, 120000)
+      }
+    } catch (e) {
+      // ignore
+    }
+    return () => {
+      mounted = false
+      if (interval) window.clearInterval(interval)
+    }
+  }, [])
+
   // fetch recent CVEs from API and normalize for CVEList
   useEffect(() => {
     let mounted = true
@@ -620,6 +644,8 @@ export default function Homepage({ cves, threats, lastUpdated }: Props) {
                         }}
                         className="rounded border-gray-200 text-sm"
                       >
+                        <option value={5}>5</option>
+                        <option value={15}>15</option>
                         <option value={25}>25</option>
                         <option value={50}>50</option>
                         <option value={100}>100</option>

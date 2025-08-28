@@ -51,6 +51,9 @@ export default function CVEList({ items }: { items: CVE[] }) {
   const navigateTo = (id: string) => {
     const url = `/vul/${encodeURIComponent(id)}`
     // use history API to avoid full reload
+    try {
+      window.scrollTo({ top: 0, left: 0 })
+    } catch (e) {}
     window.history.pushState({}, '', url)
     window.dispatchEvent(new PopStateEvent('popstate'))
   }
