@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import CVEList from '../components/CVEList'
 import ThreatFeed from '../components/ThreatFeed'
+import { authFetch } from '../lib/auth'
 
 type Props = {
   cves: any[]
@@ -333,8 +334,8 @@ export default function Homepage({ cves, threats, lastUpdated }: Props) {
   // pagination
   params.set('limit', String(limit))
   params.set('offset', String(offset))
-  const url = `http://localhost:8000/cves/search?${params.toString()}`
-        const resp = await fetch(url, { headers: { accept: 'application/json' } })
+  const url = `/cves/search?${params.toString()}`
+  const resp = await authFetch(url, { headers: { accept: 'application/json' } })
         if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
   const data = await resp.json()
   console.log('=== API Response Debug ===')

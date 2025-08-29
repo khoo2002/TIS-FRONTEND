@@ -8,6 +8,8 @@ import { sampleCves, sampleThreats } from './data/sample'
 import './i18n'
 import VulnerabilityPage from './pages/VulnerabilityPage'
 import Homepage from './pages/Homepage'
+import Login from './pages/Login'
+import { getToken } from './lib/auth'
 
 export default function App() {
   const [cves] = useState(sampleCves)
@@ -25,6 +27,17 @@ export default function App() {
   }, [])
 
   const isVulPage = pathname.startsWith('/vul/')
+  const isLoginPage = pathname === '/login'
+  const authed = Boolean(getToken())
+
+  // If already authenticated and on /login, redirect to home
+  useEffect(() => {
+    if (isLoginPage && authed) {
+      try { window.scrollTo({ top: 0, left: 0 }) } catch {}
+      window.history.pushState({}, '', '/')
+      window.dispatchEvent(new PopStateEvent('popstate'))
+    }
+  }, [isLoginPage, authed])
 
   return (
     <div className="min-h-screen font-roboto">
@@ -32,8 +45,12 @@ export default function App() {
 
       <div className="w-full h-1 bg-pink-600"></div>
 
-      {/* Main content area: render VulnerabilityPage inside the same layout so A11Y and header persist */}
-      {isVulPage ? (
+      {/* Main content area */}
+      {isLoginPage ? (
+        <Login />
+      ) : !authed ? (
+        <Login />
+      ) : isVulPage ? (
         <div>
           <VulnerabilityPage />
         </div>

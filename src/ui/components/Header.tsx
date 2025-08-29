@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react'
+import { clearToken, getUserInfo } from '../lib/auth'
 
 export default function Header({ children }: { children?: React.ReactNode }) {
+  const user = getUserInfo()
   const [open, setOpen] = useState(false)
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const [autoRefresh, setAutoRefresh] = useState<boolean>(false)
@@ -159,13 +161,19 @@ export default function Header({ children }: { children?: React.ReactNode }) {
             {profileOpen && (
               <div className="absolute right-0 mt-2 w-56 bg-white text-gray-800 rounded shadow-lg ring-1 ring-black ring-opacity-5 z-50">
                 <div className="p-3 border-b">
-                  <div className="font-medium">Jane Doe</div>
-                  <div className="text-xs text-gray-500">Administrator</div>
+                  {/* Email shown above role; truncate with ellipsis and show full on hover */}
+                  <div
+                    className="font-medium truncate"
+                    title={(user.email || `User #${user.sub || ''}`) as string}
+                  >
+                    {user.email || `User #${user.sub || ''}`}
+                  </div>
+                  <div className="text-xs text-gray-500">{(user.roles && user.roles[0]) ? user.roles[0] : 'Visitor'}</div>
                 </div>
                 <div className="p-2">
                   <button className="w-full text-left px-3 py-2 rounded hover:bg-gray-100" onClick={() => { setProfileOpen(false); go('/profile') }}>View profile</button>
                   <button className="w-full text-left px-3 py-2 rounded hover:bg-gray-100" onClick={() => { setProfileOpen(false); go('/settings') }}>Settings</button>
-                  <button className="w-full text-left px-3 py-2 rounded hover:bg-gray-100 text-red-600" onClick={() => { setProfileOpen(false); /* placeholder logout */ go('/logout') }}>Logout</button>
+                  <button className="w-full text-left px-3 py-2 rounded hover:bg-gray-100 text-red-600" onClick={() => { setProfileOpen(false); clearToken(); go('/login') }}>Logout</button>
                 </div>
               </div>
             )}
