@@ -1,5 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { clearToken, getUserInfo } from '../lib/auth'
+import { triggerHardRefresh } from '../lib/admin'
+import { hasPermission } from '../lib/rbac'
 
 export default function Header({ children }: { children?: React.ReactNode }) {
   const user = getUserInfo()
@@ -114,7 +116,7 @@ export default function Header({ children }: { children?: React.ReactNode }) {
                   setDropdownOpen((v) => !v)
                 }
               }}
-              className="text-white p-2 bg-transparent border-0 rounded hover:bg-pink-500/20"
+              className="text-white p-2 bg-transparent border-0 rounded hover:bg-pink-500/20 hidden"
             >
               <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
                 <path d="M12 6a2 2 0 110-4 2 2 0 010 4zm0 8a2 2 0 110-4 2 2 0 010 4zm0 8a2 2 0 110-4 2 2 0 010 4z" />
@@ -136,10 +138,34 @@ export default function Header({ children }: { children?: React.ReactNode }) {
                     </button>
                   </div>
                   <div className="text-xs text-gray-500 mt-2">When enabled, the CVE list will auto-refresh periodically.</div>
+                  {/* Admin-only hard refresh */}
+                  {hasPermission(user, 'hardRefreshView') && (
+                    <>
+                      <div className="h-px bg-gray-200 my-2" />
+                      <button
+                        className="w-full text-left text-sm px-2 py-1.5 rounded hover:bg-gray-100"
+                        onClick={async () => {
+
+                          const res = await triggerHardRefresh()
+                          
+                          if (res.ok) {
+                            alert('Hard refresh triggered')
+                          } else {
+                            const details = res.lastStatus ? ` (status ${res.lastStatus}${res.lastText ? `: ${res.lastText}` : ''})` : ''
+                            alert(`Failed to trigger hard refresh${details}\nTried: ${res.tried.join(', ')}`)
+                          }
+                        }}
+                        title="Trigger a server-side refresh for all viewers"
+                      >
+                        Hard refresh view
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
             )}
           </div>
+
           {/* profile avatar */}
           <div className="relative" ref={profileRef}>
             <button
@@ -161,17 +187,29 @@ export default function Header({ children }: { children?: React.ReactNode }) {
             {profileOpen && (
               <div className="absolute right-0 mt-2 w-56 bg-white text-gray-800 rounded shadow-lg ring-1 ring-black ring-opacity-5 z-50">
                 <div className="p-3 border-b">
-                  {/* Email shown above role; truncate with ellipsis and show full on hover */}
-                  <div
-                    className="font-medium truncate"
-                    title={(user.email || `User #${user.sub || ''}`) as string}
-                  >
+                  {/* Email above role; truncate with ellipsis and show full on hover */}
+                  <div className="font-medium truncate" title={(user.email || `User #${user.sub || ''}`) as string}>
                     {user.email || `User #${user.sub || ''}`}
                   </div>
-                  <div className="text-xs text-gray-500">{(user.roles && user.roles[0]) ? user.roles[0] : 'Visitor'}</div>
+                  <div className="text-xs text-gray-500" title={(user.roles && user.roles[0]) ? user.roles[0] : 'Visitor'}>
+                    {(user.roles && user.roles[0]) ? user.roles[0] : 'Visitor'}
+                  </div>
                 </div>
                 <div className="p-2">
-                  <button className="w-full text-left px-3 py-2 rounded hover:bg-gray-100" onClick={() => { setProfileOpen(false); go('/profile') }}>View profile</button>
+                  {/* If admin -> Manage users (links to auth/admin UI). Else -> View profile */}
+                  {hasPermission(user, 'manageUsers') ? (
+                    <a
+                      className="block w-full text-left px-3 py-2 rounded hover:bg-gray-100"
+                      href="http://localhost:8001/admin/"
+                      target="_blank"
+                      rel="noreferrer noopener"
+                      onClick={() => setProfileOpen(false)}
+                    >
+                      Manage users
+                    </a>
+                  ) : (
+                    <button className="w-full text-left px-3 py-2 rounded hover:bg-gray-100" onClick={() => { setProfileOpen(false); go('/profile') }}>View profile</button>
+                  )}
                   <button className="w-full text-left px-3 py-2 rounded hover:bg-gray-100" onClick={() => { setProfileOpen(false); go('/settings') }}>Settings</button>
                   <button className="w-full text-left px-3 py-2 rounded hover:bg-gray-100 text-red-600" onClick={() => { setProfileOpen(false); clearToken(); go('/login') }}>Logout</button>
                 </div>
