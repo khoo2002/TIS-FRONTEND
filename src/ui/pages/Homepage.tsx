@@ -449,7 +449,7 @@ export default function Homepage({ cves, threats, lastUpdated }: Props) {
       <div className="mb-6 flex items-center justify-between">
         <h2 className="text-2xl font-bold text-gray-800">Recent CVEs Affecting Network Infrastructure</h2>
         <div className="flex items-center space-x-3">
-          <div className="hidden sm:block text-sm text-gray-500">Last Updated: {lastUpdated}</div>
+          <div className="hidden sm:block text-sm text-gray-500">Last Updated: {new Date().toLocaleString()}</div>
           <div className="w-80">
             <label htmlFor="site-search" className="sr-only">Search CVEs</label>
             <div className="relative">

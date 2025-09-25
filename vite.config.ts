@@ -13,7 +13,8 @@ export default defineConfig(({ mode }) => {
         '/auth': { target: AUTH_BASE, changeOrigin: true, secure: false },
         '/cves': { target: API_BASE, changeOrigin: true, secure: false },
         '/cve': { target: API_BASE, changeOrigin: true, secure: false },
-  '/admin': { target: API_BASE, changeOrigin: true, secure: false },
+        '/admin': { target: API_BASE, changeOrigin: true, secure: false },
+        '/public': { target: API_BASE, changeOrigin: true, secure: false }
       }
     }
   }

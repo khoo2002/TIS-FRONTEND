@@ -9,7 +9,15 @@ import './i18n'
 import VulnerabilityPage from './pages/VulnerabilityPage'
 import Homepage from './pages/Homepage'
 import Login from './pages/Login'
+import CurationEditPage from './pages/admin/CurationEditPage'
+import AdminHomePage from './pages/admin/AdminHomePage'
+import DashboardPage from './pages/admin/DashboardPage'
+import ReportPage from './pages/admin/ReportPage'
+import SettingsPage from './pages/admin/SettingsPage'
 import { getToken } from './lib/auth'
+import PublicHomepage from './pages/PublicHomepage'
+import PublicCveDetail from './pages/PublicCveDetail'
+import PublicAlertDetail from './pages/PublicAlertDetail'
 
 export default function App() {
   const [cves] = useState(sampleCves)
@@ -27,7 +35,16 @@ export default function App() {
   }, [])
 
   const isVulPage = pathname.startsWith('/vul/')
+  const isCurationEditPage = pathname.startsWith('/curation/edit/')
+  const isViewerHome = pathname === '/viewer' || pathname === '/viewer/'
+  const isViewerCve = pathname.startsWith('/viewer/cve/')
+  const isViewerAlert = pathname.startsWith('/viewer/alert/')
+  const isViewerPage = pathname.startsWith('/viewer') // Any viewer page
   const isLoginPage = pathname === '/login'
+  const isAdminHome = pathname === '/admin' || pathname === '/admin/'
+  const isDashboard = pathname === '/dashboard' || pathname === '/dashboard/'
+  const isReport = pathname === '/report' || pathname === '/report/'
+  const isSettings = pathname === '/settings' || pathname === '/settings/'
   const authed = Boolean(getToken())
 
   // If already authenticated and on /login, redirect to home
@@ -43,13 +60,39 @@ export default function App() {
     <div className="min-h-screen font-roboto">
       <Header />
 
-      <div className="w-full h-1 bg-pink-600"></div>
+      <div className={`w-full h-1 ${isViewerPage ? 'bg-blue-600' : 'bg-pink-600'}`}></div>
 
       {/* Main content area */}
-      {isLoginPage ? (
+      {isViewerHome ? (
+        <PublicHomepage />
+      ) : isViewerCve ? (
+        <PublicCveDetail cveId={decodeURIComponent(pathname.replace('/viewer/cve/', ''))} />
+      ) : isViewerAlert ? (
+        <PublicAlertDetail slug={decodeURIComponent(pathname.replace('/viewer/alert/', ''))} />
+      ) : isLoginPage ? (
         <Login />
       ) : !authed ? (
         <Login />
+      ) : isAdminHome ? (
+        <div>
+          <AdminHomePage />
+        </div>
+      ) : isDashboard ? (
+        <div>
+          <DashboardPage />
+        </div>
+      ) : isReport ? (
+        <div>
+          <ReportPage />
+        </div>
+      ) : isSettings ? (
+        <div>
+          <SettingsPage />
+        </div>
+      ) : isCurationEditPage ? (
+        <div>
+          <CurationEditPage />
+        </div>
       ) : isVulPage ? (
         <div>
           <VulnerabilityPage />

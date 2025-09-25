@@ -1,10 +1,10 @@
 import type { UserInfo } from './auth'
 
 // Define application permissions and a simple role-to-permissions map.
-export type Permission = 'manageUsers' | 'hardRefreshView'
+export type Permission = 'manageUsers' | 'hardRefreshView' | 'ADMIN_FUNCTIONS'
 
 const ROLE_PERMISSIONS: Record<string, Permission[]> = {
-  admin: ['manageUsers', 'hardRefreshView'],
+  admin: ['manageUsers', 'hardRefreshView', 'ADMIN_FUNCTIONS'],
 }
 
 export function hasRole(user: UserInfo | undefined, role: string): boolean {

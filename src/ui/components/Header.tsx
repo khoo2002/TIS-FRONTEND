@@ -1,10 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { clearToken, getUserInfo } from '../lib/auth'
+import { clearToken, getUserInfo, getToken } from '../lib/auth'
 import { triggerHardRefresh } from '../lib/admin'
 import { hasPermission } from '../lib/rbac'
 
 export default function Header({ children }: { children?: React.ReactNode }) {
   const user = getUserInfo()
+  const isAuthenticated = Boolean(getToken())
+  const [pathname, setPathname] = useState(window.location.pathname || '')
   const [open, setOpen] = useState(false)
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const [autoRefresh, setAutoRefresh] = useState<boolean>(false)
@@ -13,6 +15,15 @@ export default function Header({ children }: { children?: React.ReactNode }) {
   const dropdownRef = useRef<HTMLDivElement | null>(null)
   const profileRef = useRef<HTMLDivElement | null>(null)
   const [profileOpen, setProfileOpen] = useState(false)
+
+  // Check if we're on a viewer page (public pages)
+  const isViewerPage = pathname.startsWith('/viewer')
+
+  useEffect(() => {
+    const onPop = () => setPathname(window.location.pathname || '')
+    window.addEventListener('popstate', onPop)
+    return () => window.removeEventListener('popstate', onPop)
+  }, [])
 
   useEffect(() => {
     function onDocClick(e: Event) {
@@ -48,6 +59,7 @@ export default function Header({ children }: { children?: React.ReactNode }) {
     try {
       window.scrollTo({ top: 0, left: 0 })
     } catch (e) {}
+    setPathname(href) // Update pathname state for theme detection
     window.location.href = href
   }
 
@@ -73,51 +85,58 @@ export default function Header({ children }: { children?: React.ReactNode }) {
   }, [autoRefresh])
 
   return (
-    <div className="bg-pink-400 shadow-md">
+    <div className={`shadow-md ${isViewerPage ? 'bg-blue-500' : 'bg-pink-400'}`}>
   <header className="container mx-auto px-6 py-4 flex items-center justify-between">
         <div className="flex items-center">
-          {/* Hamburger - original left placement */}
-          <button
-            aria-label={open ? 'Close menu' : 'Open menu'}
-            aria-expanded={open}
-            onClick={toggle}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault()
-                toggle()
-              }
-            }}
-            className="text-white mr-4 p-0 bg-transparent border-0"
-          >
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="4" y1="7" x2="20" y2="7" />
-              <line x1="4" y1="12" x2="20" y2="12" />
-              <line x1="4" y1="17" x2="20" y2="17" />
-            </svg>
-          </button>
+          {/* Hamburger - only show for authenticated users */}
+          {isAuthenticated && (
+            <button
+              aria-label={open ? 'Close menu' : 'Open menu'}
+              aria-expanded={open}
+              onClick={toggle}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  toggle()
+                }
+              }}
+              className="text-white mr-4 p-0 bg-transparent border-0"
+            >
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="4" y1="7" x2="20" y2="7" />
+                <line x1="4" y1="12" x2="20" y2="12" />
+                <line x1="4" y1="17" x2="20" y2="17" />
+              </svg>
+            </button>
+          )}
 
-          <button className="text-white mr-1 p-0 bg-transparent border-0" aria-label="Home" onClick={() => go('/') }>
+          <button 
+            className="text-white mr-1 p-0 bg-transparent border-0" 
+            aria-label="Home" 
+            onClick={() => go(isAuthenticated ? '/' : '/viewer')}
+          >
             <img alt="NSC-TIP Logo" className="h-12" src="/logo.png" />
           </button>
           <span className="text-2xl font-bold text-white ml-2">NSC-TIP</span>
         </div>
 
-        {/* right-side controls: three-dot menu and children */}
-        <div className="flex items-center space-x-3">
-          <div className="relative" ref={dropdownRef}>
-            <button
-              aria-haspopup="true"
-              aria-expanded={dropdownOpen}
-              aria-label="Open options"
-              onClick={() => setDropdownOpen((v) => !v)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault()
-                  setDropdownOpen((v) => !v)
-                }
-              }}
-              className="text-white p-2 bg-transparent border-0 rounded hover:bg-pink-500/20 hidden"
-            >
+        {/* right-side controls: three-dot menu and children - only for authenticated users */}
+        {isAuthenticated && (
+          <div className="flex items-center space-x-3">
+            <div className="relative" ref={dropdownRef}>
+              <button
+                aria-haspopup="true"
+                aria-expanded={dropdownOpen}
+                aria-label="Open options"
+                onClick={() => setDropdownOpen((v) => !v)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault()
+                    setDropdownOpen((v) => !v)
+                  }
+                }}
+                className="text-white p-2 bg-transparent border-0 rounded hover:bg-pink-500/20 hidden"
+              >
               <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
                 <path d="M12 6a2 2 0 110-4 2 2 0 010 4zm0 8a2 2 0 110-4 2 2 0 010 4zm0 8a2 2 0 110-4 2 2 0 010 4z" />
               </svg>
@@ -219,9 +238,10 @@ export default function Header({ children }: { children?: React.ReactNode }) {
 
           <div className="ml-4 hidden sm:block">{children}</div>
         </div>
+        )}
 
-        {/* Slide-over panel */}
-        {open && (
+        {/* Slide-over panel - only for authenticated users */}
+        {isAuthenticated && open && (
           <div className="fixed inset-0 z-40 flex">
             {/* overlay */}
             <button aria-hidden className="fixed inset-0 bg-black bg-opacity-30" onClick={() => setOpen(false)} />
@@ -233,11 +253,26 @@ export default function Header({ children }: { children?: React.ReactNode }) {
               </div>
               <div className="p-4">
                 <ul className="space-y-2">
+                  {/* Admin navigation items */}
+                  {hasPermission(user, 'ADMIN_FUNCTIONS') && (
+                    <>
+                      <li><button className="w-full text-left px-3 py-2 rounded hover:bg-gray-100" onClick={() => go('/')}>Admin Home</button></li>
+                      <li><button className="w-full text-left px-3 py-2 rounded hover:bg-gray-100" onClick={() => go('/viewer')}>Public Home</button></li>
+                      <li><button className="w-full text-left px-3 py-2 rounded hover:bg-gray-100" onClick={() => go('/dashboard')}>Dashboard</button></li>
+                      <li><button className="w-full text-left px-3 py-2 rounded hover:bg-gray-100" onClick={() => go('/report')}>Report</button></li>
+                      <li><button className="w-full text-left px-3 py-2 rounded hover:bg-gray-100" onClick={() => go('/settings')}>Settings</button></li>
+                      <li><div className="h-px bg-gray-200 my-2" /></li>
+                    </>
+                  )}
+                  
+                  {/* Public navigation items */}
                   <li><button className="w-full text-left px-3 py-2 rounded hover:bg-gray-100" onClick={() => go('/')}>Home</button></li>
                   <li><button className="w-full text-left px-3 py-2 rounded hover:bg-gray-100" onClick={() => go('/vulnerabilities')}>Vulnerabilities</button></li>
                   <li><button className="w-full text-left px-3 py-2 rounded hover:bg-gray-100" onClick={() => go('/threats')}>Threat Feed</button></li>
                   <li><button className="w-full text-left px-3 py-2 rounded hover:bg-gray-100" onClick={() => go('/about')}>About</button></li>
-                  <li><button className="w-full text-left px-3 py-2 rounded hover:bg-gray-100" onClick={() => go('/settings')}>Settings</button></li>
+                  {!hasPermission(user, 'ADMIN_FUNCTIONS') && (
+                    <li><button className="w-full text-left px-3 py-2 rounded hover:bg-gray-100" onClick={() => go('/settings')}>Settings</button></li>
+                  )}
                 </ul>
               </div>
             </nav>
