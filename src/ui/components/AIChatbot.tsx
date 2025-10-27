@@ -3,6 +3,43 @@ import { authFetch } from '../lib/auth'
 import { getUserInfo } from '../lib/auth'
 import { hasPermission } from '../lib/rbac'
 
+// Enhanced markdown renderer for rich text formatting
+const renderMarkdown = (text: string): string => {
+  let html = text
+    // Escape HTML first to prevent XSS
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    
+    // Headers: # ## ### text
+    .replace(/^###\s+(.+)$/gm, '<h3 class="font-semibold text-sm mt-3 mb-2 text-gray-800 dark:text-gray-200">$1</h3>')
+    .replace(/^##\s+(.+)$/gm, '<h2 class="font-bold text-base mt-3 mb-2 text-gray-800 dark:text-gray-200">$1</h2>')
+    .replace(/^#\s+(.+)$/gm, '<h1 class="font-bold text-lg mt-3 mb-2 text-gray-800 dark:text-gray-200">$1</h1>')
+    
+    // Bold: **text** (avoid conflicts with bullet points)
+    .replace(/\*\*([^\*\n]+)\*\*/g, '<strong class="font-semibold">$1</strong>')
+    
+    // Italic: *text* (be careful with bullet points)
+    .replace(/(?<!\*)\*([^\*\n]+)\*(?!\*)/g, '<em class="italic">$1</em>')
+    
+    // Code: `code`
+    .replace(/`([^`]+)`/g, '<code class="bg-gray-200 dark:bg-gray-600 px-1 py-0.5 rounded text-xs font-mono">$1</code>')
+    
+    // Bullet points: * item or - item (improved to handle nested content)
+    .replace(/^\s*[\*\-]\s+(.+)$/gm, '<div class="flex items-start my-1"><span class="text-blue-500 mr-2 mt-0.5">•</span><span class="flex-1">$1</span></div>')
+    
+    // Line breaks for paragraphs
+    .replace(/\n\n/g, '</p><p class="mb-2">')
+    .replace(/\n/g, '<br>')
+  
+  // Wrap in paragraph tags if not already wrapped in other elements
+  if (!html.includes('<h') && !html.includes('<div')) {
+    html = `<p class="mb-2">${html}</p>`
+  }
+  
+  return html
+}
+
 interface ChatMessage {
   id: string
   role: 'user' | 'assistant'
@@ -17,11 +54,113 @@ interface AIChatbotProps {
 
 const AIChatbot: React.FC<AIChatbotProps> = ({ isOpen, onClose }) => {
   // Array for system prompts
-  const [systemPrompts, setSystemPrompts] = useState<string[]>(["You are an expert CVE security assistant."])
+  const [systemPrompts, setSystemPrompts] = useState<string[]>([
+    "You are an expert CVE security assistant.",
+    "Must not answer questions unrelated to CVE analysis or security topics.",
+    "You have been provided with the current page context including URL, content, and any form data.",
+    "Use this context to provide specific, relevant assistance related to what the user is currently viewing or working on.",
+    "If the page contains CVE information, vulnerability details, or security-related content, reference it directly in your responses."
+  ])
 
-  // Get current page info (example: URL, title, etc.)
+  // Get current page info including full HTML or relevant details
   const getCurrentPageInfo = () => {
-    return `Page URL: ${window.location.href}`
+    const url = window.location.href
+    const title = document.title
+    const pathname = window.location.pathname
+    
+    // Get page content - prioritize main content areas
+    const getPageContent = () => {
+      // Try to get main content areas first
+      const mainSelectors = [
+        'main',
+        '[role="main"]',
+        '.main-content',
+        '#main',
+        '#content',
+        '.content'
+      ]
+      
+      for (const selector of mainSelectors) {
+        const mainElement = document.querySelector(selector) as HTMLElement
+        if (mainElement) {
+          return mainElement.innerText.trim().substring(0, 3000) // Limit to 3000 chars
+        }
+      }
+      
+      // Fallback to body content, excluding script tags, style tags, and navigation
+      const bodyClone = document.body.cloneNode(true) as HTMLElement
+      
+      // Remove unwanted elements
+      const unwantedSelectors = [
+        'script', 'style', 'nav', 'header', 'footer', 
+        '.navigation', '.nav', '.header', '.footer',
+        '.chatbot', '.chat', '[class*="chat"]'  // Exclude chatbot itself
+      ]
+      
+      unwantedSelectors.forEach(selector => {
+        const elements = bodyClone.querySelectorAll(selector)
+        elements.forEach(el => el.remove())
+      })
+      
+      return bodyClone.innerText.trim().substring(0, 3000) // Limit to 3000 chars
+    }
+    
+    const pageContent = getPageContent()
+    
+    // Get meta information
+    const metaDescription = document.querySelector('meta[name="description"]')?.getAttribute('content') || ''
+    const metaKeywords = document.querySelector('meta[name="keywords"]')?.getAttribute('content') || ''
+    
+    // Get visible form data if any
+    const getVisibleFormData = () => {
+      const forms = document.querySelectorAll('form:not([style*="display: none"]):not(.hidden)')
+      const formData: string[] = []
+      
+      forms.forEach(form => {
+        const inputs = form.querySelectorAll('input, textarea, select')
+        const formInfo: string[] = []
+        
+        inputs.forEach(input => {
+          const element = input as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+          if (element.type !== 'password' && element.type !== 'hidden') {
+            const label = form.querySelector(`label[for="${element.id}"]`)?.textContent || 
+                         element.getAttribute('placeholder') || 
+                         element.getAttribute('name') || 
+                         element.getAttribute('aria-label') || ''
+            
+            if (label) {
+              formInfo.push(`${label}: ${element.value || '[empty]'}`)
+            }
+          }
+        })
+        
+        if (formInfo.length > 0) {
+          formData.push(`Form: ${formInfo.join(', ')}`)
+        }
+      })
+      
+      return formData.join('\n')
+    }
+    
+    const formData = getVisibleFormData()
+    
+    return `
+CURRENT PAGE CONTEXT:
+===================
+URL: ${url}
+Title: ${title}
+Path: ${pathname}
+Meta Description: ${metaDescription}
+Meta Keywords: ${metaKeywords}
+
+PAGE CONTENT:
+${pageContent}
+
+${formData ? `FORM DATA:\n${formData}` : ''}
+
+Please use this page context to provide more relevant and specific assistance.
+===================
+    `.trim()
   }
   const [geminiStatus, setGeminiStatus] = useState<'active' | 'inactive'>('inactive')
   const currentUser = getUserInfo()
@@ -50,7 +189,7 @@ const AIChatbot: React.FC<AIChatbotProps> = ({ isOpen, onClose }) => {
     {
       id: '1',
       role: 'assistant',
-      content: 'Hello! I\'m your AI assistant for CVE analysis. I can help you understand vulnerabilities, assess risks, and provide security recommendations. How can I assist you today?',
+      content: 'Hello! I\'m your AI assistant for CVE analysis. I have access to the current page content and can provide context-aware assistance. I can help you understand vulnerabilities, assess risks, provide security recommendations, and analyze the content you\'re currently viewing. How can I assist you today?',
       timestamp: new Date()
     }
   ])
@@ -58,7 +197,7 @@ const AIChatbot: React.FC<AIChatbotProps> = ({ isOpen, onClose }) => {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  const inputRef = useRef<HTMLInputElement>(null)
+  const inputRef = useRef<HTMLTextAreaElement>(null)
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -193,7 +332,7 @@ const AIChatbot: React.FC<AIChatbotProps> = ({ isOpen, onClose }) => {
       {
         id: '1',
         role: 'assistant',
-        content: 'Chat cleared. How can I help you with CVE analysis?',
+        content: 'Chat cleared. I can see the current page content and provide context-aware assistance. How can I help you with CVE analysis or the content you\'re viewing?',
         timestamp: new Date()
       }
     ])
@@ -256,7 +395,10 @@ const AIChatbot: React.FC<AIChatbotProps> = ({ isOpen, onClose }) => {
                     : 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100'
                 }`}
               >
-                <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                <div 
+                  className="text-sm" 
+                  dangerouslySetInnerHTML={{ __html: renderMarkdown(message.content) }}
+                />
                 <p className="text-xs opacity-70 mt-1">
                   {message.timestamp.toLocaleTimeString()}
                 </p>
@@ -286,31 +428,32 @@ const AIChatbot: React.FC<AIChatbotProps> = ({ isOpen, onClose }) => {
             </div>
           )}
           
-          <div className="flex space-x-2">
-            <input
+          <div className="flex flex-col space-y-2">
+            <textarea
               ref={inputRef}
-              type="text"
               value={inputMessage}
               onChange={(e) => setInputMessage(e.target.value)}
               onKeyPress={handleKeyPress}
-              placeholder="Ask about CVEs, security analysis..."
+              placeholder="Ask about CVEs, security analysis... (Supports markdown formatting)"
               disabled={isLoading}
-              className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50"
+              rows={3}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50 resize-none"
             />
-            <button
-              onClick={handleSendMessage}
-              disabled={!inputMessage.trim() || isLoading}
-              className="px-4 py-2 bg-blue-500 hover:bg-blue-600 disabled:bg-blue-300 text-white rounded-md transition-colors text-sm"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-              </svg>
-            </button>
+            <div className="flex justify-between items-center">
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                💡 Supports **bold**, *italic*, `code`, and bullet points
+              </p>
+              <button
+                onClick={handleSendMessage}
+                disabled={!inputMessage.trim() || isLoading}
+                className="px-4 py-2 bg-blue-500 hover:bg-blue-600 disabled:bg-blue-300 text-white rounded-md transition-colors text-sm"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                </svg>
+              </button>
+            </div>
           </div>
-          
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-            💡 Ask about CVE analysis, risk assessment, or security recommendations
-          </p>
         </div>
       </div>
     </div>
