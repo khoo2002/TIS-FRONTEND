@@ -1,4 +1,52 @@
 # NSC-TIP Frontend (scalable)
+DEMO Part 1-6
+<!-- Video: place Threat-Intel-api.mp4 at the repo root or `docs/` -->
+<a href="./Threat-Intel-p1.mp4">Threat-Intel-p1.mp4</a>
+
+<video controls src="./Threat-Intel-p1.mp4" title="Threat-Intel" style="max-width:100%;height:auto;">
+  Your browser does not support the video tag. Download the video here:
+  <a href="./Threat-Intel-p1.mp4">Threat-Intel-p1.mp4</a>
+</video>
+
+<!-- Video: place Threat-Intel-api.mp4 at the repo root or `docs/` -->
+<a href="./Threat-Intel-p2.mp4">Threat-Intel-p2.mp4</a>
+
+<video controls src="./Threat-Intel-p2.mp4" title="Threat-Intel" style="max-width:100%;height:auto;">
+  Your browser does not support the video tag. Download the video here:
+  <a href="./Threat-Intel-p2.mp4">Threat-Intel-p2.mp4</a>
+</video>
+
+<!-- Video: place Threat-Intel-api.mp4 at the repo root or `docs/` -->
+<a href="./Threat-Intel-p3.mp4">Threat-Intel-p3.mp4</a>
+
+<video controls src="./Threat-Intel-p3.mp4" title="Threat-Intel" style="max-width:100%;height:auto;">
+  Your browser does not support the video tag. Download the video here:
+  <a href="./Threat-Intel-p3.mp4">Threat-Intel-p3.mp4</a>
+</video>
+
+<!-- Video: place Threat-Intel-api.mp4 at the repo root or `docs/` -->
+<a href="./Threat-Intel-p4.mp4">Threat-Intel-p4.mp4</a>
+
+<video controls src="./Threat-Intel-p4.mp4" title="Threat-Intel" style="max-width:100%;height:auto;">
+  Your browser does not support the video tag. Download the video here:
+  <a href="./Threat-Intel-p4.mp4">Threat-Intel-p4.mp4</a>
+</video>
+
+<!-- Video: place Threat-Intel-api.mp4 at the repo root or `docs/` -->
+<a href="./Threat-Intel-p5.mp4">Threat-Intel-p5.mp4</a>
+
+<video controls src="./Threat-Intel-p5.mp4" title="Threat-Intel" style="max-width:100%;height:auto;">
+  Your browser does not support the video tag. Download the video here:
+  <a href="./Threat-Intel-p5.mp4">Threat-Intel-p5.mp4</a>
+</video>
+
+<!-- Video: place Threat-Intel-api.mp4 at the repo root or `docs/` -->
+<a href="./Threat-Intel-p6.mp4">Threat-Intel-p5.mp4</a>
+
+<video controls src="./Threat-Intel-p6.mp4" title="Threat-Intel" style="max-width:100%;height:auto;">
+  Your browser does not support the video tag. Download the video here:
+  <a href="./Threat-Intel-p6.mp4">Threat-Intel-p6.mp4</a>
+</video>
 
 This repository is a frontend-only scaffold (Vite + React + TypeScript + Tailwind) prepared for connecting to a future API backend.
 
